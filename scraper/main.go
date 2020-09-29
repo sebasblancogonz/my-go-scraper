@@ -19,7 +19,7 @@ type Product struct {
 
 func main() {
 
-	products := MakeRequest("https://www.carrefour.es/supermercado/la-despensa/alimentacion/aceites-y-vinagres/N-1c4rm7v/c")
+	products := MakeRequest("https://www.carrefour.es/supermercado/la-despensa/alimentacion/pastas/N-107dg9k/c")
 
 	file, _ := json.MarshalIndent(products, "", "")
 
@@ -43,30 +43,39 @@ func MakeRequest(url string) []Product {
 		doc, _ := goquery.NewDocumentFromReader(resp.Body)
 
 		doc.Find(".product-card-item").Each(func(i int, s *goquery.Selection) {
-			pName := strings.Replace(s.Find(".title-product").Text(), "\n", "", -1)
-
-			if s.Find(".price").Text() != "" {
-				rawPrice := strings.Replace(s.Find(".price").Text(), ",", ".", 1)
-				convPrice, err := strconv.ParseFloat(strings.ReplaceAll(rawPrice, "\u00a0€", ""), 16)
-				if err != nil {
-					fmt.Print(err)
-				}
-				p := Product{Name: pName, Price: float32(convPrice)}
-				products = append(products, p)
-			}
-			if s.Find(".price-less").Text() != "" {
-				rawPrice := strings.Replace(s.Find(".price-less").Text(), ",", ".", 1)
-				delLineBreaks := strings.Replace(rawPrice, "\n", "", 1)
-				convPrice, err := strconv.ParseFloat(strings.ReplaceAll(delLineBreaks, "\u00a0€", ""), 32)
-				if err != nil {
-					fmt.Print(err)
-				}
-				p := Product{Name: pName, Price: float32(convPrice)}
-				products = append(products, p)
-			}
+			products = append(products, CreateProduct(s))
 		})
 
 		return products
 	}
 	return nil
+}
+
+//CreateProduct creates products
+func CreateProduct(s *goquery.Selection) Product {
+	var price float32
+	name := strings.Replace(s.Find(".title-product").Text(), "\n", "", -1)
+	if CheckIfPriceLess(name, s.Find(".price").Text()) {
+		rawPrice := strings.Replace(s.Find(".price").Text(), ",", ".", 1)
+		price = ConvertString(rawPrice)
+	}
+	if CheckIfPriceLess(name, s.Find(".price-less").Text()) {
+		rawPrice := strings.Replace(s.Find(".price-less").Text(), ",", ".", 1)
+		delLineBreaks := strings.Replace(rawPrice, "\n", "", 1)
+		price = ConvertString(delLineBreaks)
+	}
+	return Product{Name: name, Price: price}
+}
+
+//ConvertString converts strings to float32
+func ConvertString(price string) float32 {
+	convPrice, err := strconv.ParseFloat(strings.ReplaceAll(price, "\u00a0€", ""), 32)
+	if err != nil {
+		fmt.Print(err)
+	}
+	return float32(convPrice)
+}
+
+func CheckIfPriceLess(name string, price string) bool {
+	return name != "" && price != ""
 }
