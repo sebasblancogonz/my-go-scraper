@@ -18,8 +18,16 @@ type Product struct {
 }
 
 func main() {
+	host := "https://www.carrefour.es"
+	url := host + "/supermercado/la-despensa/alimentacion/pastas/N-107dg9k/c"
 
-	products := MakeRequest("https://www.carrefour.es/supermercado/la-despensa/alimentacion/pastas/N-107dg9k/c")
+	var products []Product
+
+	pages := GetPages(url)
+
+	for _, page := range pages {
+		products = append(products, MakeRequest(host+page)...)
+	}
 
 	file, _ := json.MarshalIndent(products, "", "")
 
@@ -41,7 +49,6 @@ func MakeRequest(url string) []Product {
 
 	if resp.StatusCode == 200 {
 		doc, _ := goquery.NewDocumentFromReader(resp.Body)
-
 		doc.Find(".product-card-item").Each(func(i int, s *goquery.Selection) {
 			products = append(products, CreateProduct(s))
 		})
@@ -76,6 +83,31 @@ func ConvertString(price string) float32 {
 	return float32(convPrice)
 }
 
+//CheckIfPriceLess checks if the product has discount
 func CheckIfPriceLess(name string, price string) bool {
 	return name != "" && price != ""
+}
+
+//GetPages will return pagination
+func GetPages(url string) []string {
+	resp, err := http.Get(url)
+
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	defer resp.Body.Close()
+
+	var pages []string
+
+	if resp.StatusCode == 200 {
+		doc, _ := goquery.NewDocumentFromReader(resp.Body)
+		doc.Find(".selectPagination > option").Each(func(i int, p *goquery.Selection) {
+			attr, _ := p.Attr("value")
+			pages = append(pages, attr)
+		})
+
+		return pages
+	}
+	return nil
 }
