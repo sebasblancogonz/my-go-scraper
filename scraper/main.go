@@ -24,17 +24,17 @@ type Category struct {
 	URL  string
 }
 
+//TODO refactor main func and try to simplify it. Also fix the "Ofertas y promociones" section, because it is saved as nil
 func main() {
 	host := "https://www.carrefour.es"
 	url := host + "/supermercado"
-
-	var products []Product
 
 	categories := GetAllCategories(url)
 
 	if _, err := os.Stat("../data/carrefour"); os.IsNotExist(err) {
 		os.MkdirAll("../data/carrefour", 0700)
 	}
+	var products []Product
 
 	for _, category := range categories {
 		url := host + category.URL
@@ -43,17 +43,42 @@ func main() {
 			os.MkdirAll("../data/carrefour/"+category.Name, 0700)
 		}
 		for _, subCategory := range subCategories {
-			pages := GetProductPages(url)
+			moreCategories := GetAllCategories(host + subCategory.URL)
+			if len(moreCategories) != 0 {
+				if _, err := os.Stat("../data/carrefour/" + category.Name + "/" + subCategory.Name); os.IsNotExist(err) {
+					os.MkdirAll("../data/carrefour/"+category.Name+"/"+subCategory.Name, 0700)
+				}
+				for _, subSubCategory := range moreCategories {
+					pages := GetProductPages(url + subSubCategory.URL)
 
-			for _, page := range pages {
-				products = append(products, MakeRequest(host+page)...)
-			}
+					for _, page := range pages {
+						products = append(products, MakeRequest(host+page)...)
+					}
 
-			file, _ := json.MarshalIndent(products, "", "")
+					file, _ := json.MarshalIndent(products, "", "")
 
-			er := ioutil.WriteFile("../data/carrefour/"+category.Name+"/"+subCategory.Name+".json", file, 0644)
-			if er != nil {
-				print(er.Error())
+					er := ioutil.WriteFile("../data/carrefour/"+category.Name+
+						"/"+subCategory.Name+"/"+subSubCategory.Name+".json", file, 0644)
+					if er != nil {
+						print(er.Error())
+					}
+					products = nil
+				}
+			} else {
+				pages := GetProductPages(url + subCategory.URL)
+
+				for _, page := range pages {
+					products = append(products, MakeRequest(host+page)...)
+				}
+
+				file, _ := json.MarshalIndent(products, "", "")
+
+				er := ioutil.WriteFile("../data/carrefour/"+category.Name+"/"+subCategory.Name+".json", file, 0644)
+				if er != nil {
+					print(er.Error())
+				}
+
+				products = nil
 			}
 		}
 	}
