@@ -17,13 +17,18 @@ type Product struct {
 	Price float32
 }
 
+type Category struct {
+	Name string
+	Url  string
+}
+
 func main() {
 	host := "https://www.carrefour.es"
 	url := host + "/supermercado/la-despensa/alimentacion/pastas/N-107dg9k/c"
 
 	var products []Product
 
-	pages := GetPages(url)
+	pages := GetProductPages(url)
 
 	for _, page := range pages {
 		products = append(products, MakeRequest(host+page)...)
@@ -88,8 +93,8 @@ func CheckIfPriceLess(name string, price string) bool {
 	return name != "" && price != ""
 }
 
-//GetPages will return pagination
-func GetPages(url string) []string {
+//GetProductPages will return pagination
+func GetProductPages(url string) []string {
 	resp, err := http.Get(url)
 
 	if err != nil {
@@ -110,4 +115,28 @@ func GetPages(url string) []string {
 		return pages
 	}
 	return nil
+}
+
+//GetAllCategories will return all categories and their urls
+func GetAllCategories(url string) []Category {
+	var categories []Category
+	resp, err := http.Get(url)
+
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 200 {
+		doc, _ := goquery.NewDocumentFromReader(resp.Body)
+		doc.Find(".category").Each(func(i int, c *goquery.Selection) {
+			url, _ := c.Find("a").Attr("href")
+			cat := Category{Name: c.Find(".nombre-categoria").Text(), Url: url}
+
+			categories = append(categories, cat)
+		})
+	}
+
+	return categories
 }
