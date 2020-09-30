@@ -26,7 +26,7 @@ type Category struct {
 
 func main() {
 	host := "https://www.carrefour.es"
-	url := host + "/supermercado/la-despensa/alimentacion/N-qo15hf/c"
+	url := host + "/supermercado"
 
 	var products []Product
 
@@ -37,17 +37,24 @@ func main() {
 	}
 
 	for _, category := range categories {
-		pages := GetProductPages(host + category.URL)
-
-		for _, page := range pages {
-			products = append(products, MakeRequest(host+page)...)
+		url := host + category.URL
+		subCategories := GetAllCategories(url)
+		if _, err := os.Stat("../data/carrefour/" + category.Name); os.IsNotExist(err) {
+			os.MkdirAll("../data/carrefour/"+category.Name, 0700)
 		}
+		for _, subCategory := range subCategories {
+			pages := GetProductPages(url)
 
-		file, _ := json.MarshalIndent(products, "", "")
+			for _, page := range pages {
+				products = append(products, MakeRequest(host+page)...)
+			}
 
-		er := ioutil.WriteFile("../data/carrefour/"+category.Name+".json", file, 0644)
-		if er != nil {
-			print(er.Error())
+			file, _ := json.MarshalIndent(products, "", "")
+
+			er := ioutil.WriteFile("../data/carrefour/"+category.Name+"/"+subCategory.Name+".json", file, 0644)
+			if er != nil {
+				print(er.Error())
+			}
 		}
 	}
 
