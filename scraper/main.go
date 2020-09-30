@@ -17,9 +17,10 @@ type Product struct {
 	Price float32
 }
 
+//Category struct
 type Category struct {
 	Name string
-	Url  string
+	URL  string
 }
 
 func main() {
@@ -132,7 +133,7 @@ func GetAllCategories(url string) []Category {
 		doc, _ := goquery.NewDocumentFromReader(resp.Body)
 		doc.Find(".category").Each(func(i int, c *goquery.Selection) {
 			url, _ := c.Find("a").Attr("href")
-			cat := Category{Name: c.Find(".nombre-categoria").Text(), Url: url}
+			cat := Category{Name: c.Find(".nombre-categoria").Text(), URL: url}
 
 			categories = append(categories, cat)
 		})
