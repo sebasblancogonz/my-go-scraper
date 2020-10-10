@@ -31,9 +31,6 @@ func main() {
 
 	categories := GetAllCategories(url)
 
-	if _, err := os.Stat("../data/carrefour"); os.IsNotExist(err) {
-		os.MkdirAll("../data/carrefour", 0700)
-	}
 	var products []Product
 
 	for _, category := range categories {
@@ -43,12 +40,17 @@ func main() {
 			os.MkdirAll("../data/carrefour/"+category.Name, 0700)
 		}
 		for _, subCategory := range subCategories {
-			moreCategories := GetAllCategories(host + subCategory.URL)
-			if len(moreCategories) != 0 {
-				if _, err := os.Stat("../data/carrefour/" + category.Name + "/" + subCategory.Name); os.IsNotExist(err) {
-					os.MkdirAll("../data/carrefour/"+category.Name+"/"+subCategory.Name, 0700)
-				}
-				for _, subSubCategory := range moreCategories {
+			if _, err := os.Stat("../data/carrefour/" + category.Name + "/" + subCategory.Name); os.IsNotExist(err) {
+				os.MkdirAll("../data/carrefour/"+category.Name+"/"+subCategory.Name, 0700)
+			}
+			subSubCategories := GetAllCategories(host + subCategory.URL)
+			if len(subSubCategories) != 0 {
+				for _, subSubCategory := range subSubCategories {
+
+					if _, err := os.Stat("../data/carrefour/" + category.Name + "/" + subCategory.Name +
+						"/" + subSubCategory.Name); os.IsNotExist(err) {
+						os.MkdirAll("../data/carrefour/"+category.Name+"/"+subCategory.Name, 0700)
+					}
 					pages := GetProductPages(url + subSubCategory.URL)
 
 					for _, page := range pages {
@@ -100,6 +102,7 @@ func MakeRequest(url string) []Product {
 	if resp.StatusCode == 200 {
 		doc, _ := goquery.NewDocumentFromReader(resp.Body)
 		doc.Find(".product-card-item").Each(func(i int, s *goquery.Selection) {
+			//Check if description is empty and price is == 0
 			products = append(products, CreateProduct(s))
 		})
 
