@@ -102,8 +102,9 @@ func MakeRequest(url string) []Product {
 	if resp.StatusCode == 200 {
 		doc, _ := goquery.NewDocumentFromReader(resp.Body)
 		doc.Find(".product-card-item").Each(func(i int, s *goquery.Selection) {
-			//Check if description is empty and price is == 0
-			products = append(products, CreateProduct(s))
+			if s.Find("title-product").Text() != "" {
+				products = append(products, CreateProduct(s))
+			}
 		})
 
 		return products
