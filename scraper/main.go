@@ -24,7 +24,7 @@ type Category struct {
 	Name, URL string
 }
 
-//TODO refactor main func and try to simplify it. Also fix the "Ofertas y promociones" section, because it is saved as nil
+//TODO Fix the "Ofertas y promociones" json files under every category, because it is saved as null
 func main() {
 	host := "https://www.carrefour.es"
 	url := host + "/supermercado"
