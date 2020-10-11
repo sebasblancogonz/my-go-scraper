@@ -14,16 +14,14 @@ import (
 
 //Product struct
 type Product struct {
-	Name    string
-	Price   float32
-	IsOffer bool
-	Image   string
+	Name, Image string
+	Price       float32
+	IsOffer     bool
 }
 
 //Category struct
 type Category struct {
-	Name string
-	URL  string
+	Name, URL string
 }
 
 //TODO refactor main func and try to simplify it. Also fix the "Ofertas y promociones" section, because it is saved as nil
@@ -39,29 +37,23 @@ func main() {
 		directory := "../data/carrefour/" + category.Name
 		url := host + category.URL
 		subCategories := GetAllCategories(url)
-		if _, err := os.Stat(directory); os.IsNotExist(err) {
-			os.MkdirAll(directory, 0700)
-		}
+		CreateDirectories(directory)
 		for _, subCategory := range subCategories {
 			subDirectory := directory + "/" + subCategory.Name
-			if _, err := os.Stat(subDirectory); os.IsNotExist(err) {
-				os.MkdirAll(subDirectory, 0700)
-			}
+			fileName := subDirectory + ".json"
+			CreateDirectories(subDirectory)
 			subSubCategories := GetAllCategories(host + subCategory.URL)
 			if len(subSubCategories) != 0 {
 				for _, subSubCategory := range subSubCategories {
+					fileName := subDirectory + "/" + subSubCategory.Name + ".json"
 					pages := GetProductPages(url + subSubCategory.URL)
 
 					for _, page := range pages {
 						products = append(products, MakeRequest(host+page)...)
 					}
 
-					file, _ := json.MarshalIndent(products, "", "")
+					WriteJSONFile(products, fileName)
 
-					er := ioutil.WriteFile(subDirectory+"/"+subSubCategory.Name+".json", file, 0644)
-					if er != nil {
-						print(er.Error())
-					}
 					products = nil
 				}
 			} else {
@@ -71,12 +63,7 @@ func main() {
 					products = append(products, MakeRequest(host+page)...)
 				}
 
-				file, _ := json.MarshalIndent(products, "", "")
-
-				er := ioutil.WriteFile(subDirectory+".json", file, 0644)
-				if er != nil {
-					print(er.Error())
-				}
+				WriteJSONFile(products, fileName)
 
 				products = nil
 			}
@@ -195,4 +182,21 @@ func GetAllCategories(url string) []Category {
 	}
 
 	return categories
+}
+
+//CreateDirectories will create all directories on a given path
+func CreateDirectories(directory string) {
+	if _, err := os.Stat(directory); os.IsNotExist(err) {
+		os.MkdirAll(directory, 0700)
+	}
+}
+
+//WriteJSONFile will write the products on a JSON file
+func WriteJSONFile(products []Product, fileName string) {
+	file, _ := json.MarshalIndent(products, "", "")
+
+	er := ioutil.WriteFile(fileName, file, 0644)
+	if er != nil {
+		print(er.Error())
+	}
 }
