@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -33,6 +34,8 @@ func main() {
 
 	var products []Product
 
+	var wg sync.WaitGroup
+
 	for _, category := range categories {
 		directory := "../data/carrefour/" + category.Name
 		url := host + category.URL
@@ -44,18 +47,23 @@ func main() {
 			CreateDirectories(subDirectory)
 			subSubCategories := GetAllCategories(host + subCategory.URL)
 			if len(subSubCategories) != 0 {
-				for _, subSubCategory := range subSubCategories {
-					fileName := subDirectory + "/" + subSubCategory.Name + ".json"
-					pages := GetProductPages(url + subSubCategory.URL)
+				wg.Add(len(subSubCategories))
+				go func(subDirectory string, subSubCategories []Category) {
+					for _, subSubCategory := range subSubCategories {
+						fileName := subDirectory + "/" + subSubCategory.Name + ".json"
+						pages := GetProductPages(url + subSubCategory.URL)
 
-					for _, page := range pages {
-						products = append(products, MakeRequest(host+page)...)
+						for _, page := range pages {
+							products = append(products, MakeRequest(host+page)...)
+						}
+
+						WriteJSONFile(products, fileName)
+
+						products = nil
+						wg.Done()
 					}
-
-					WriteJSONFile(products, fileName)
-
-					products = nil
-				}
+				}(subDirectory, subSubCategories)
+				wg.Wait()
 			} else {
 				pages := GetProductPages(url + subCategory.URL)
 
